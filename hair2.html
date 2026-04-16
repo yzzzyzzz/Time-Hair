@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>時光沙龍 - 專業美髮測驗系統</title>
+    <style>
+        :root { 
+            --primary-dark: #334155; 
+            --accent-gray: #475569;  
+            --text-main: #1e293b;    
+            --correct: #10b981;      
+            --wrong: #ef4444;        
+        }
+        
+        body { 
+            font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; 
+            margin: 0; padding: 20px;
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; color: var(--text-main);
+        }
+
+        .bg-image {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: url('https://meee.com.tw/LYehEqP') no-repeat center center;
+            background-size: cover;
+            filter: blur(8px) brightness(0.85);
+            transform: scale(1.1); z-index: -1;
+        }
+
+        .card { 
+            background: rgba(255, 255, 255, 0.96);
+            width: 100%; max-width: 450px; 
+            padding: 30px; border-radius: 20px; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2); 
+            backdrop-filter: blur(10px);
+        }
+
+        .logo-container {
+            text-align: center; margin-bottom: 25px;
+            border-bottom: 2px solid #f1f5f9; padding-bottom: 20px;
+        }
+        .logo-title { font-size: 2.2rem; font-weight: 300; margin: 0; letter-spacing: 8px; color: #222; }
+        .logo-sub { font-size: 0.8rem; letter-spacing: 3px; color: #666; margin-top: 5px; }
+
+        h1 { text-align: center; color: var(--primary-dark); font-size: 1.1rem; margin: 15px 0; }
+        p { font-weight: 600; margin-bottom: 6px; color: var(--accent-gray); font-size: 0.9rem; }
+
+        select, input { 
+            width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #cbd5e1; 
+            border-radius: 8px; font-size: 1rem; box-sizing: border-box; background: white;
+        }
+
+        .btn-main { 
+            width: 100%; padding: 15px; border: none; border-radius: 8px; 
+            background: var(--primary-dark); color: white; font-size: 1.1rem; 
+            font-weight: 500; cursor: pointer; transition: 0.3s; margin-top: 5px;
+        }
+
+        .opt { 
+            width: 100%; padding: 16px; margin: 10px 0; border: 1px solid #e2e8f0; 
+            border-radius: 10px; background: white; text-align: left; cursor: pointer; 
+            font-size: 1rem; transition: 0.2s; color: var(--text-main);
+        }
+        .opt.selected { background: #f1f5f9; border-color: var(--primary-dark); border-width: 2px; }
+        .correct { background: #ecfdf5 !important; border-color: var(--correct) !important; color: #065f46 !important; font-weight: 600; }
+        .wrong { background: #fef2f2 !important; border-color: var(--wrong) !important; color: #991b1b !important; }
+
+        .info { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 0.85rem; color: #64748b; }
+        #quiz-page, #result-page { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="bg-image"></div>
+
+<div class="card">
+    <div class="logo-container">
+        <div class="logo-title">時光</div>
+        <div class="logo-sub">TIME HAIR SALON</div>
+    </div>
+
+    <div id="start-page">
+        <h1>測驗系統設定</h1>
+        <p>測驗模式</p>
+        <select id="mode-select">
+            <option value="practice">練習模式</option>
+            <option value="exam">模擬考模式</option>
+        </select>
+        <p>難度階級</p>
+        <select id="level-select">
+            <option value="easy">初級題目</option>
+            <option value="medium">中級題目</option>
+            <option value="hard">高級題目</option>
+        </select>
+        <p>題數</p>
+        <input type="number" id="count-input" value="20">
+        <button class="btn-main" onclick="initSystem()">開始挑戰</button>
+    </div>
+
+    <div id="quiz-page">
+        <div class="info">
+            <span id="display-idx">題號: 1</span>
+            <span id="display-mode">模式: 練習</span>
+        </div>
+        <h2 id="q-text" style="font-size: 1.1rem; line-height: 1.5; margin-bottom: 20px;"></h2>
+        <div id="opts-box"></div>
+        <button id="next-btn" class="btn-main" onclick="handleNext()" style="display:none;">下一題</button>
+    </div>
+
+    <div id="result-page">
+        <h2 style="text-align:center;">測驗報告</h2>
+        <h1 id="final-score" style="text-align:center; font-size: 4rem; margin: 10px 0; color:var(--primary-dark);"></h1>
+        <p id="score-comment" style="text-align:center; margin-bottom: 25px;"></p>
+        <button class="btn-main" onclick="location.reload()">回首頁</button>
+    </div>
+</div>
+
+<script>
+const allQuestions = {
+    easy: [
+        {q: "洗髮時水溫不宜過高，最理想約為？", o: ["20°C", "38°C", "60°C", "80°C"], a: 1},
+        {q: "以下何種工具適合用於梳理剛洗完的濕髮？", o: ["細齒梳", "大齒寬梳", "圓梳", "尖尾梳"], a: 1}
+    ],
+    medium: [
+        {q: "燙髮劑第一劑若停留時間過長，最可能導致？", o: ["彈性增加", "髮質受損斷裂", "捲度變大", "頭皮出油"], a: 1}
+    ],
+    hard: [
+        {q: "在校色時，若要抵銷帶橘的髮色，應使用何色？", o: ["紫色", "藍色", "綠色", "紅色"], a: 1}
+    ]
+};
+
+let pool = [];
+let cur = 0;
+let mode = 'practice';
+let score = 0;
+let selected = null;
+let examResults = [];
+
+function initSystem() {
+    mode = document.getElementById('mode-select').value;
+    const level = document.getElementById('level-select').value;
+    const count = parseInt(document.getElementById('count-input').value);
+    
+    pool = allQuestions[level].sort(() => Math.random() - 0.5).slice(0, count);
+    
+    document.getElementById('start-page').style.display = 'none';
+    document.getElementById('quiz-page').style.display = 'block';
+    document.getElementById('display-mode').innerText = `模式: ${mode === 'practice' ? '練習' : '考試'}`;
+    loadQ();
+}
+
+function loadQ() {
+    selected = null;
+    const item = pool[cur];
+    document.getElementById('display-idx').innerText = `進度: ${cur + 1} / ${pool.length}`;
+    document.getElementById('q-text').innerText = item.q;
+    const box = document.getElementById('opts-box');
+    box.innerHTML = "";
+    document.getElementById('next-btn').style.display = "none";
+
+    item.o.forEach((text, i) => {
+        const btn = document.createElement("button");
+        btn.className = "opt";
+        btn.innerText = text;
+        btn.onclick = () => {
+            if(mode === 'practice') {
+                checkPractice(i, item.a, btn);
+            } else {
+                checkExam(i, btn);
+            }
+        };
+        box.appendChild(btn);
+    });
+}
+
+function checkPractice(i, correct, btn) {
+    document.querySelectorAll('.opt').forEach(b => b.disabled = true);
+    if(i === correct) {
+        btn.classList.add('correct');
+        score += Math.round(100 / pool.length);
+    } else {
+        btn.classList.add('wrong');
+        document.querySelectorAll('.opt')[correct].classList.add('correct');
+    }
+    document.getElementById('next-btn').style.display = "block";
+}
+
+function checkExam(i, btn) {
+    document.querySelectorAll('.opt').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selected = i;
+    document.getElementById('next-btn').style.display = "block";
+}
+
+function handleNext() {
+    if(mode === 'exam') {
+        examResults.push(selected);
+    }
+    
+    cur++;
+    if(cur < pool.length) {
+        loadQ();
+    } else {
+        showFinal();
+    }
+}
+
+function showFinal() {
+    document.getElementById('quiz-page').style.display = 'none';
+    document.getElementById('result-page').style.display = 'block';
+    
+    let finalScore = 0;
+    if(mode === 'practice') {
+        finalScore = score;
+    } else {
+        let correctCount = 0;
+        pool.forEach((q, idx) => {
+            if(q.a === examResults[idx]) correctCount++;
+        });
+        finalScore = Math.round((correctCount / pool.length) * 100);
+    }
+    
+    finalScore = finalScore > 100 ? 100 : finalScore;
+    document.getElementById('final-score').innerText = finalScore + "分";
+    document.getElementById('score-comment').innerText = finalScore >= 60 ? "及格了！專業度滿分！" : "再練習幾次，妳一定可以的！";
+}
+</script>
+</body>
+</html>
